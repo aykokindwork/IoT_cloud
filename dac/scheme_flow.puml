@@ -1,0 +1,41 @@
+@startuml
+skinparam sequenceMessageAlign center
+
+participant "Внешняя сеть / Хакер" as World
+box "Защищенный периметр (Edge)" #LightBlue
+    participant "Edge-Шлюз\n(Random Forest)" as Edge
+end box
+participant "IoT-Устройство" as IoT
+participant "Облако / Big Data\n(LSTM / Kafka)" as Cloud
+
+== Контроль ИСХОДЯЩЕГО трафика (от устройства) ==
+Note over IoT, Edge: Устройство пытается отправить данные или атаковать сеть
+IoT -> Edge: Пакет данных (Outbound)
+Edge -> Edge: Бинарная классификация [3]\n(Проверка: Это норма или аномалия?)
+
+alt Подозрение на атаку (DDoS/Exfiltration) [4, 5]
+    Edge -[#red]> IoT: БЛОКИРОВКА (Drop Packet)
+    Edge -> Cloud: Лог атаки в Kafka [6, 7]
+else Трафик легитимен
+    Edge -> World: Пропуск данных в сеть
+end
+
+== Контроль ВХОДЯЩЕГО трафика (к устройству) ==
+Note over World, Edge: Кто-то пытается подключиться к IoT (SSH, MQTT)
+World -> Edge: Запрос на соединение (Inbound)
+Edge -> Edge: Анализ признаков (IAT, Rate, Flags) [8, 9]
+
+alt Обнаружена разведка или Брутфорс [4]
+    Edge -[#red]> World: БЛОКИРОВКА (Reject)
+    Edge -> Cloud: Сигнал тревоги [10]
+else Сомнение (Скрытая угроза) [6, 11]
+    Edge -> Cloud: Передача в DL (глубокий анализ)
+    Cloud -> Cloud: Анализ LSTM (временные ряды) [12]
+    alt DL подтвердил угрозу
+        Cloud -> Edge: Команда: "Забанить IP" [13]
+    else Всё в порядке
+        Edge -> IoT: Пропуск запроса к устройству
+    end
+end
+
+@enduml
