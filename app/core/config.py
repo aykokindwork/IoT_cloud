@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     MONGO_DB_NAME: str = "iot_logs"
 
     # Пути к файлам модели друга
-    MODEL_PATH: str = "models/iot_ids_model.h5"
+    MODEL_PATH: str = "models/multiclass_ids_model.h5" 
     SCALER_PATH: str = "models/scaler.pkl"
     ENCODER_PATH: str = "models/label_encoder.pkl"
     FEATURES_PATH: str = "models/feature_columns.json"
