@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.storage.mongo import connect_to_mongo, close_mongo_connection
 from app.streaming.consumer import traffic_consumer
+from app.streaming.producer import command_producer
 from app.ml.classifier import classifier  # Импортируем наш синглтон модели
 
 # Настраиваем логирование, чтобы видеть отчет о загрузке в терминале
@@ -27,6 +28,7 @@ async def lifespan(app: FastAPI):
     # Это правильно: лучше не запуститься вообще, чем работать со сломанными мозгами.
     classifier.load_model()
 
+    await command_producer.start()
     # 3. Запускаем Kafka-поток в фоновом режиме
     kafka_task = asyncio.create_task(traffic_consumer.start())
 
@@ -36,6 +38,7 @@ async def lifespan(app: FastAPI):
     logger.info("📉 Завершение работы сервиса...")
     kafka_task.cancel()
     await traffic_consumer.stop()
+    await command_producer.stop()
     await close_mongo_connection()
 
 
@@ -46,6 +49,6 @@ app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 async def health_check():
     return {
         "status": "ok",
-        "service": settings.PROJECT_NAME,
-        "model_loaded": classifier.model is not None
+        "model_loaded": classifier.model is not None,
+        "producer_active": command_producer.producer is not None
     }
