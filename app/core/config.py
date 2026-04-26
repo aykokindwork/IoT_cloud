@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     # Это значит Pydantic ОБЯЗАН найти это в .env файле.
     KAFKA_BOOTSTRAP_SERVERS: str
     KAFKA_TOPIC_SUSPICIOUS: str = "suspicious_traffic"
+    KAFKA_TOPIC_VERDICT: str = "cloud_verdicts"
     KAFKA_CONSUMER_GROUP: str = "cloud_lstm_group"
 
     # MongoDB
