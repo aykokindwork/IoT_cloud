@@ -5,6 +5,8 @@ import joblib
 import tensorflow as tf
 import json
 from app.core.config import settings
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
 
 logger = logging.getLogger(__name__)
 
@@ -33,23 +35,26 @@ class IDSClassifier:  # Переименовал для точности
 
     def predict(self, data: dict):
         try:
-            # 1. Формируем вектор (46 признаков)
-            input_vector = [data.get(feat, 0) for feat in self.features]
+            # 1. Извлекаем список признаков, который подготовил Go
+            input_features = data.get("features")
 
-            # 2. В массив numpy (1, 46)
-            input_array = np.array(input_vector).reshape(1, -1)
+            if not input_features or len(input_features) != len(self.features):
+                logger.error(
+                    f"❌ Некорректное кол-во признаков: получено {len(input_features) if input_features else 0}, ждали {len(self.features)}")
+                return "Error", 0.0
 
-            # 3. Нормализация
+            # 2. Превращаем в массив numpy (1, 46)
+            input_array = np.array(input_features).reshape(1, -1)
+
+            # 3. Нормализация (Scaler)
             scaled_data = self.scaler.transform(input_array)
-
-            # --- ВНИМАНИЕ: Для FFNN НЕ НУЖЕН 3D-решейп! ---
-            # Оставляем формат (1, 46)
 
             # 4. Предсказание
             prediction = self.model.predict(scaled_data, verbose=0)
-            class_idx = np.argmax(prediction)
 
-            # 5. Декодируем метку (одна из 34)
+            print(f"DEBUG: Raw prediction probabilities: {prediction[0]}")
+
+            class_idx = np.argmax(prediction)
             label = self.label_encoder.inverse_transform([class_idx])[0]
             confidence = float(np.max(prediction))
 
